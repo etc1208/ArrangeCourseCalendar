@@ -1,0 +1,24 @@
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.inputArea,
+.classBeginDate,
+.submitCalendar {
+  display: inline-block;
+}
+
+#pickmeup {
+  height: 90%;
+  overflow-y: auto;
+}
+
+#pickmeup {
+  width: 15em;
+}
+
+.pmu-day-of-week div {
+  cursor: pointer;
+}
