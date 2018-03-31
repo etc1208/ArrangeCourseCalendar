@@ -36,12 +36,15 @@ function getWeekIdx(ch) {
   }
 }
 
+var has_custom_select = false //是否主动反选、选择其他日期
+
 // 全局变量
 var __CalendarData__ = {
   TOTAL_CLASS_NUM: 10, //课时数， 默认40
   CLASS_BEGIN_DATE: null, // 开课日期, e.g. 2018-01-01
   SELECT_WEEK: [],  // 当前选择的星期, 0-6 代表 周日-周六
   SELECT_DAYS: [], // 当前选中日期的标准格式， e.g. 2018-01-01
+  FINAL_DAYS: [], // 反选、选择节日课后的最终结果
 }
 
 // 将时间戳格式化城年-月-日
@@ -80,14 +83,6 @@ function getSelectDays(weeks) {
   renderCalendar()
 }
 
-// 初始化开课日期日历
-pickmeup('#classBeginCalendar', {
-  locale: 'zh',
-  format: 'Y-m-d',
-  default_date: false,
-  hide_on_select: true
-});
-
 // 初始化日历列表
 pickmeup('#pickmeup', {
   locale: 'zh',
@@ -99,33 +94,41 @@ pickmeup('#pickmeup', {
   default_date: false,
   select_month: false,
   select_year: false,
-  calendars: 12
+  calendars: 12,
 });
 
 // 监听开课日期变化
-document.getElementById('classBeginCalendar').addEventListener('pickmeup-change', function (e) {
-  if (__CalendarData__.CLASS_BEGIN_DATE === e.detail.formatted_date) return
-  __CalendarData__.CLASS_BEGIN_DATE = e.detail.formatted_date
+$('#classBeginCalendar').change(function (e) {
+  if (__CalendarData__.CLASS_BEGIN_DATE === e.target.value) return
+  __CalendarData__.FINAL_DAYS = []
+  has_custom_select = false
+
+  __CalendarData__.CLASS_BEGIN_DATE = e.target.value
   getSelectDays(__CalendarData__.SELECT_WEEK)
 })
 
 // 修改课时数按钮点击处理
 $('#totalClassBtn').click(function() {
-  var tmpVal = $('#totalClassNum').val()
-  if (isNaN(tmpVal.trim()) || tmpVal.trim() === 0) {
+  var tmpVal = parseInt($('#totalClassNum').val(), 10)
+  if (isNaN(tmpVal) || tmpVal === 0) {
     alert('输入数字不合法')
     $('#totalClassNum').val('')
-  }
-  else {
+  } else if (__CalendarData__.TOTAL_CLASS_NUM !== tmpVal) {
+    __CalendarData__.FINAL_DAYS = []
+    has_custom_select = false
+
     __CalendarData__.TOTAL_CLASS_NUM = tmpVal
     if (__CalendarData__.CLASS_BEGIN_DATE) getSelectDays(__CalendarData__.SELECT_WEEK)
-  }
+  } else return
 })
 
 // 星期点击事件处理
 $('.pmu-day-of-week').click(function(e) {
   if (!__CalendarData__.CLASS_BEGIN_DATE) alert('未选择开课日期')
   else {
+    __CalendarData__.FINAL_DAYS = []
+    has_custom_select = false
+
     var selectWeek = getWeekIdx(e.target.innerText)
     var weekIdx = __CalendarData__.SELECT_WEEK.indexOf(selectWeek)
     if (weekIdx === -1) { // 增加某星期
@@ -138,9 +141,24 @@ $('.pmu-day-of-week').click(function(e) {
   }
 })
 
+// 当主动点击日历中某日期发生变化时触发
+document.getElementById('pickmeup').addEventListener('pickmeup-change', function (e) {
+  if (!has_custom_select) has_custom_select = true
+  __CalendarData__.FINAL_DAYS = e.detail.formatted_date
+  console.log(__CalendarData__.FINAL_DAYS)
+})
+
 // 提交数据处理
 $('.submitCalendar').click(function() {
-  if (__CalendarData__.SELECT_DAYS.length === 0) alert('数据为空')
-  else if (__CalendarData__.SELECT_DAYS.length !== __CalendarData__.TOTAL_CLASS_NUM) alert('未选满')
-  else alert(JSON.stringify(__CalendarData__.SELECT_DAYS))
+  if (has_custom_select) {
+    if (__CalendarData__.FINAL_DAYS.length === 0) alert('数据为空')
+    else if (__CalendarData__.FINAL_DAYS.length < __CalendarData__.TOTAL_CLASS_NUM) alert('未选满')
+    else if (__CalendarData__.FINAL_DAYS.length > __CalendarData__.TOTAL_CLASS_NUM) alert('超出总数')
+    else alert(JSON.stringify(__CalendarData__.FINAL_DAYS))
+  } else {
+    if (__CalendarData__.SELECT_DAYS.length === 0) alert('数据为空')
+    else if (__CalendarData__.SELECT_DAYS.length < __CalendarData__.TOTAL_CLASS_NUM) alert('未选满')
+    else if (__CalendarData__.SELECT_DAYS.length > __CalendarData__.TOTAL_CLASS_NUM) alert('超出总数')
+    else alert(JSON.stringify(__CalendarData__.SELECT_DAYS))
+  }
 })
